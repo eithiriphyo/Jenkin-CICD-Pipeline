@@ -1,20 +1,17 @@
 pipeline {
+
     agent {
-    docker {
-        image 'maven:3.9.6-eclipse-temurin-17'
-        args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
+        docker {
+            image 'maven:3.9.6-eclipse-temurin-17'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
+        }
     }
-}
 
-stages {
+    stages {
 
-        stage('Debug') {
+        stage('Checkout') {
             steps {
-                sh '''
-                    pwd
-                    ls -la
-                    mvn -version
-                '''
+                checkout scm
             }
         }
 
@@ -29,7 +26,7 @@ stages {
 
         stage('Static Code Analysis') {
             environment {
-                SONAR_URL = 'http://54.160.99.121:9000'
+                SONAR_URL = "http://34.201.116.83:9000"
             }
             steps {
                 withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
@@ -48,21 +45,18 @@ stages {
                 DOCKER_IMAGE = "eithiriphyo/ultimate-cicd:${BUILD_NUMBER}"
             }
             steps {
-                sh """
+                sh '''
                     cd spring-boot-app
-                    docker build -t ${DOCKER_IMAGE} .
-                """
+                    docker build -t eithiriphyo/ultimate-cicd:${BUILD_NUMBER} .
+                '''
             }
         }
 
         stage('Push Docker Image') {
-            environment {
-                DOCKER_IMAGE = "eithiriphyo/ultimate-cicd:${BUILD_NUMBER}"
-            }
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'docker-cred') {
-                        docker.image("${DOCKER_IMAGE}").push()
+                        docker.image("eithiriphyo/ultimate-cicd:${BUILD_NUMBER}").push()
                     }
                 }
             }
@@ -70,12 +64,13 @@ stages {
 
         stage('Update Deployment File') {
             environment {
-                GIT_REPO_NAME = 'Jenkin-CICD-Pipeline'
-                GIT_USER_NAME = 'eithiriphyo'
+                GIT_REPO_NAME = "Jenkin-CICD-Pipeline"
+                GIT_USER_NAME = "eithiriphyo"
             }
+
             steps {
                 withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                    sh """
+                    sh '''
                         git config user.email "eithiriphyo135@gmail.com"
                         git config user.name "eithiriphyo"
 
@@ -86,7 +81,7 @@ stages {
                         git diff --cached --quiet || git commit -m "Update deployment image to version ${BUILD_NUMBER}"
 
                         git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
-                    """
+                    '''
                 }
             }
         }
