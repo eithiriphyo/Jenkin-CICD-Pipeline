@@ -1,15 +1,6 @@
 pipeline {
 
-    agent {
-        docker {
-            // ✅ FIX: image must contain Maven + Git + Docker CLI
-            image 'eithiriphyo/maven-docker-agent:v2'
-            args '''
-                -u root
-                -v /var/run/docker.sock:/var/run/docker.sock
-            '''
-        }
-    }
+    agent any
 
     environment {
         SONAR_URL = "http://54.160.99.121:9000"
@@ -59,12 +50,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dir('spring-boot-app') {
-                        sh """
-                        docker version
-                        docker build -t ${DOCKER_IMAGE} .
-                        """
-                    }
+                    sh """
+                    docker version
+                    docker build -t ${DOCKER_IMAGE} spring-boot-app
+                    """
                 }
             }
         }
@@ -91,7 +80,7 @@ pipeline {
 
                     git add spring-boot-app-manifests/deployment.yml
 
-                    git commit -m "Update image tag ${BUILD_NUMBER}" || echo "No changes"
+                    git commit -m "Update image tag ${BUILD_NUMBER}" || echo "No changes to commit"
 
                     git pull origin main --rebase || true
 
@@ -104,10 +93,11 @@ pipeline {
 
     post {
         success {
-            echo "✅ Pipeline SUCCESS"
+            echo "✅ Pipeline SUCCESS - Build, Test, Scan, Docker Push completed"
         }
+
         failure {
-            echo "❌ Pipeline FAILED"
+            echo "❌ Pipeline FAILED - Check logs"
         }
     }
 }
