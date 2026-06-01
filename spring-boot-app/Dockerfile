@@ -1,13 +1,14 @@
-# You can change this base image to anything else
-# But make sure to use the correct version of Java
-FROM adoptopenjdk/openjdk11:alpine-jre
+FROM eclipse-temurin:17-jdk
 
-# Simply the artifact path
-ARG artifact=target/spring-boot-web.jar
+RUN apt-get update && apt-get install -y \
+    maven \
+    git \
+    curl \
+    docker.io \
+ && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/app
+# Create non-root user
+RUN useradd -m jenkins
+USER jenkins
 
-COPY ${artifact} app.jar
-
-# This should not be changed
-ENTRYPOINT ["java","-jar","app.jar"]
+WORKDIR /home/jenkins
